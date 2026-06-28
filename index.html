@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>WebAR 인터랙션 스타터</title>
+
+  <!-- AR 실행 엔진: A-Frame(3D) + AR.js(카메라/마커 인식) -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+
+    /* 화면 위에 떠 있는 안내/조작 UI (HTML 레이어) */
+    #ui {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, rgba(0,0,0,0.55), transparent);
+      pointer-events: none;
+    }
+    #hint {
+      color: #fff; font-size: 14px; text-align: center; line-height: 1.5;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6); max-width: 320px;
+    }
+    #hint b { color: #7CFFB2; }
+    #action {
+      pointer-events: auto;
+      border: 0; border-radius: 999px; padding: 14px 28px;
+      font-size: 16px; font-weight: 600; color: #06231a;
+      background: #7CFFB2; box-shadow: 0 6px 20px rgba(124,255,178,0.35);
+    }
+    #action:active { transform: scale(0.96); }
+  </style>
+</head>
+<body>
+  <!-- ▼ AR 씬: 카메라 영상 위에 3D를 합성 -->
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; colorManagement: true;"
+    arjs="sourceType: webcam; debugUIEnabled: false;">
+
+    <!-- 마우스/터치 탭을 3D 객체로 전달하는 커서 (인터랙션 핵심) -->
+    <a-entity cursor="rayOrigin: mouse" raycaster="objects: .tappable"></a-entity>
+
+    <!-- 표준 'hiro' 마커: 이 마커를 카메라로 비추면 객체가 나타남.
+         마커 이미지는 'AR.js hiro marker'로 검색해 화면/인쇄로 띄우세요. -->
+    <a-marker preset="hiro" id="marker">
+
+      <!-- 기본 데모 객체: 탭하면 반응하는 박스 -->
+      <a-box
+        id="obj"
+        class="tappable"
+        position="0 0.5 0"
+        scale="1 1 1"
+        color="#7CFFB2"
+        animation__spin="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear">
+      </a-box>
+
+      <!-- ▼ AI로 만든 3D 모델(.glb)을 쓰려면 위 a-box 대신 아래 사용:
+      <a-entity
+        class="tappable"
+        gltf-model="url(./my-ai-model.glb)"
+        position="0 0 0" scale="0.5 0.5 0.5"
+        animation__spin="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear">
+      </a-entity>
+      -->
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <!-- ▼ 화면 UI -->
+  <div id="ui">
+    <div id="hint"><b>hiro 마커</b>를 카메라로 비추세요. 나타난 객체를 <b>탭</b>하거나 버튼을 누르면 반응합니다.</div>
+    <button id="action">색 바꾸기</button>
+  </div>
+
+  <script>
+    // 인터랙션 로직 — 여기를 바이브 코딩으로 확장하면 됩니다.
+    const obj = document.querySelector('#obj');
+    const palette = ['#7CFFB2', '#FF7C9C', '#7CB2FF', '#FFD97C'];
+    let i = 0;
+
+    function react() {
+      // 색 변경 + 살짝 튀어오르는 피드백 애니메이션
+      i = (i + 1) % palette.length;
+      obj.setAttribute('color', palette[i]);
+      obj.setAttribute('animation__pop', {
+        property: 'scale', from: '1 1 1', to: '1.4 1.4 1.4',
+        dir: 'alternate', dur: 150, loop: 2
+      });
+    }
+
+    // 1) 3D 객체를 직접 탭했을 때
+    obj.addEventListener('click', react);
+    // 2) 화면 버튼을 눌렀을 때
+    document.querySelector('#action').addEventListener('click', react);
+
+    // 마커 인식/해제 시점 — 사운드 재생, UI 변경 등에 활용
+    const marker = document.querySelector('#marker');
+    marker.addEventListener('markerFound', () => console.log('마커 인식됨'));
+    marker.addEventListener('markerLost', () => console.log('마커 사라짐'));
+  </script>
+</body>
+</html>
